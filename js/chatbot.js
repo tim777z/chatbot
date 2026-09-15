@@ -31,6 +31,20 @@ var ChatBot = function () {
     // a callback for after a chat entry has been added
     var addChatEntryCallback;
 
+    // the maximum length of a query that will be dispatched to an engine
+    var MAX_QUERY_LENGTH = 500;
+
+    // returns an error message when the query cannot be dispatched to an engine, otherwise null
+    function validateQuery(text) {
+        if (text == undefined || text.trim() == '') {
+            return 'Please type a question first.';
+        }
+        if (text.length > MAX_QUERY_LENGTH) {
+            return 'Sorry, that question is too long. Please shorten it.';
+        }
+        return null;
+    }
+
     // list all the predefined commands and the commands of each engine
     function updateCommandDescription() {
         var description = '';
@@ -54,7 +68,7 @@ var ChatBot = function () {
         examplePhrases = [];
         for (i = 0; i < descriptions.length; i++) {
             var pdesc = descriptions[i].replace(/(['"][^'"]+['"])/gi, '<span class="phraseHighlight">$1</span>');
-            pdesc = pdesc.replace(/(\[[^\[\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
+            pdesc = pdesc.replace(/(\[[^[\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
             //console.log(pdesc);
             var matches = pdesc.match(/<span class=['"]phraseHighlight["']>['"](.+?)['"]<\/span>/gi);
             //console.log(matches);
@@ -69,7 +83,7 @@ var ChatBot = function () {
         }
 
         var datalist = $('#chatBotCommands');
-        if (datalist.size() == 0) {
+        if (datalist.length == 0) {
             datalist = $('<datalist id="chatBotCommands">');
             $('body').append(datalist);
         } else {
@@ -125,7 +139,7 @@ var ChatBot = function () {
                 }, pauseLength);
 
                 var chclb = $('#chatBotConversationLoadingBar');
-                if (chclb.size() == 0) {
+                if (chclb.length == 0) {
                     chclb = $('<div id="chatBotConversationLoadingBar"></div>');
                     chclb.css('position','absolute');
                     $('body').append(chclb);
@@ -199,6 +213,9 @@ var ChatBot = function () {
 
                             ChatBot.addChatEntry(content, "bot");
                             ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, I could not reach the WebKnox service. Please try again.', "bot");
+                            ChatBot.thinking(false);
                         });
                     },
                     getCapabilities: function () {
@@ -253,6 +270,9 @@ var ChatBot = function () {
                             }
 
                             ChatBot.addChatEntry(content, "bot");
+                            ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, I could not reach the spoonacular service. Please try again.', "bot");
                             ChatBot.thinking(false);
                         });
                     },
@@ -327,6 +347,9 @@ var ChatBot = function () {
                             }
 
                             ChatBot.addChatEntry(content, "bot");
+                            ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, I could not reach the DuckDuckGo service. Please try again.', "bot");
                             ChatBot.thinking(false);
                         });
                     },
@@ -421,6 +444,14 @@ var ChatBot = function () {
         react: function react(text) {
             this.thinking(true);
 
+            // reject empty or overly long queries before dispatching to any engine
+            var validationError = validateQuery(text);
+            if (validationError != null) {
+                this.addChatEntry(validationError, "bot");
+                ChatBot.thinking(false);
+                return;
+            }
+
             // check for custom patterns
             for (var i = 0; i < patterns.length; i++) {
                 var pattern = patterns[i];
@@ -443,8 +474,8 @@ var ChatBot = function () {
 //                                var response = text.replace(r, pattern.actionValue);
                             var response = pattern.actionValue;
                             if (response != undefined) {
-                                for (var j = 1; j < matches.length; j++) {
-                                    response = response.replace("$" + j, matches[j]);
+                                for (var k = 1; k < matches.length; k++) {
+                                    response = response.replace("$" + k, matches[k]);
                                 }
                                 this.addChatEntry(response, "bot");
                             }
@@ -502,7 +533,8 @@ var ChatBot = function () {
                 callback: callback
             };
             this.addPatternObject(obj);
-        }
+        },
+        validateQuery: validateQuery
 
     }
 }();

@@ -10,6 +10,10 @@
     "sourceType": "script"
   },
   "extends": "eslint:recommended",
+  "globals": {
+    "$": "readonly",
+    "jQuery": "readonly"
+  },
   "rules": {
     "no-undef": "warn",
     "no-unused-vars": "warn",

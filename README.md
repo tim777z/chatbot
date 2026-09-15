@@ -56,19 +56,19 @@ You can now also manually define some patterns that the bot should be able to re
 ChatBot.addPattern(
     "(?:my name is|I'm|I am) (.*)",
     "response",
-    "Hi $1, thanks for talking to me today", 
+    "Hi $1, thanks for talking to me today",
     function(matches){
         ChatBot.setHumanName(matches[1]);
     },
     "Say 'My name is [name]' to be called by your name."
-);        
+);
 
 ChatBot.addPattern("^hi$","response","Howdy my friend", undefined, "Say 'Hi' to be greeted.");
 
 ChatBot.addPattern(
-    "compute ([0-9]+) plus ([0-9]+)", 
-    "response", 
-    undefined, 
+    "compute ([0-9]+) plus ([0-9]+)",
+    "response",
+    undefined,
     function (matches) {
         ChatBot.addChatEntry("That would be "+(1*matches[1]+1*matches[2])+".","bot");
     },
@@ -87,26 +87,26 @@ var sampleConversation = [
 // play the conversation, second parameter is the pause between the inputs in milliseconds
 ChatBot.playConversation(sampleConversation,4000)
 ```
-    
+
 You can also write your own answer engines, just implement the `react`, `getCapabilities`,  and `getSuggestUrl` methods. Here's a template:
 ```javascript
 var myengine = function() {
-    
+
     var capabilities = [
         "If you say 'hip hip', the bot says hooray"
     ]
 
     return {
         react: function (query) {
-            
+
             var content = '';
             if (query == 'hip hip') {
                 content = 'hooray';
             }
-            
+
             ChatBot.addChatEntry(content, "bot");
             ChatBot.thinking(false);
-  
+
         },
         getCapabilities: function() {
             return capabilities;
@@ -117,5 +117,51 @@ var myengine = function() {
     }
 }();
 ```
-    
-   
+
+## Development
+
+### Prerequisites
+
+- Node.js 20 (see `.nvmrc`; `nvm use` picks it up automatically)
+
+### Install
+
+```bash
+npm install
+```
+
+### Test
+
+```bash
+npm test
+```
+
+The test suite (`test/chatbot.test.js`) runs with Jest in a jsdom environment and covers pattern matching, the command description rendering, query validation, engine success/error paths, and the sample conversation guard.
+
+### Lint
+
+```bash
+npm run lint
+```
+
+ESLint (`eslint:recommended`) checks `js/`; the generated `js/chatbot.min.js` is excluded.
+
+### CI
+
+Every push and pull request is verified by the GitHub Actions workflow in `.github/workflows/ci.yml`: it installs from the committed `package-lock.json` (`npm ci`), runs the test suite, and runs the linter on a clean Ubuntu runner.
+
+## Architecture
+
+The whole library lives in a single IIFE in `js/chatbot.js` that exposes a global `ChatBot` object:
+
+- `ChatBot.init(config)` wires up the DOM (input fields, capability listing, history) and stores the configured engines and patterns.
+- `ChatBot.addPattern(regexp, actionKey, actionValue, callback, description)` registers a custom pattern. Patterns are matched before engines are consulted; `actionKey` is either `"response"` (the bot replies) or `"rewrite"` (the query is rewritten and passed on to the engines).
+- `ChatBot.Engines` contains the built-in answer engines (`webknox`, `spoonacular`, `duckduckgo`). Each engine implements `react(query)`, `getCapabilities()`, and `getSuggestUrl()`.
+- `ChatBot.react(text)` validates the query (see `ChatBot.validateQuery`), checks the registered patterns, and finally dispatches to all configured engines.
+- `ChatBot.playConversation(conversation, pauseLength)` types a sample conversation into the input field.
+
+The minified `js/chatbot.min.js` is a generated artifact of `js/chatbot.js` and is not used by the demos.
+
+## API keys
+
+The WebKnox and spoonacular engines take an API key, e.g. `ChatBot.Engines.webknox(apiKey)`. Keys are interpolated into client-side URLs, so they are visible to anyone using the page. For anything beyond a demo, proxy the engine calls through your own backend and keep the key server-side.

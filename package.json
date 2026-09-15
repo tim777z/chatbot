@@ -2,10 +2,13 @@
   "name": "chatbot",
   "version": "1.2.3",
   "description": "A simple chat bot in JavaScript with links to smart conversational APIs such as WebKnox (all purpose question answering), spoonacular (food related conversations), and DuckDuckGo Instant Answers (mostly entities like movies, people, and places).",
-  "main": "chatbot.js",
+  "main": "js/chatbot.js",
   "scripts": {
     "test": "jest",
     "lint": "eslint js/"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
@@ -29,6 +32,7 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "jquery": "^3.7.1",
     "eslint": "^8.56.0"
   },
   "jest": {
