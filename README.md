@@ -117,5 +117,15 @@ var myengine = function() {
     }
 }();
 ```
+
+## Development
+
+Requires [Node.js](https://nodejs.org/) 22 (see `.nvmrc`).
+
+```bash
+npm ci          # install dependencies from the lockfile
+npm test        # run the Jest test suite
+npm run lint    # run ESLint on js/
+```
     
    
