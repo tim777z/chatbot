@@ -1,5 +1,36 @@
-# chatbot
-A simple chat bot in JavaScript with links to smart conversational APIs such as [WebKnox](https://webknox.com/api) (all purpose question answering), [spoonacular](https://spoonacular.com/food-api) (food related conversations), and [DuckDuckGo Instant Answers](https://duckduckgo.com/api) (mostly entities like movies, people, and places).
+# PreCog Chatbot
+
+AI-powered conversational agent with smart API integrations. Answers questions using WebKnox, food conversations via Spoonacular, and entity lookups via DuckDuckGo.
+
+## Features
+
+- Natural language question answering
+- Food-related conversations
+- Entity lookup (movies, people, places)
+- Extensible API architecture
+
+## Quick Start
+
+```bash
+npm install
+npm start
+```
+
+## API Integrations
+
+| API | Purpose |
+|-----|---------|
+| WebKnox | General question answering |
+| Spoonacular | Food conversations |
+| DuckDuckGo | Entity lookups |
+
+## License
+
+Proprietary — PreCog Security
+
+## Contact
+
+timlangeveldt@gmail.com
 
 ## Demo
 

@@ -54,7 +54,7 @@ var ChatBot = function () {
         examplePhrases = [];
         for (i = 0; i < descriptions.length; i++) {
             var pdesc = descriptions[i].replace(/(['"][^'"]+['"])/gi, '<span class="phraseHighlight">$1</span>');
-            pdesc = pdesc.replace(/(\[[^[\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
+            pdesc = pdesc.replace(/(\[[^\[\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
             //console.log(pdesc);
             var matches = pdesc.match(/<span class=['"]phraseHighlight["']>['"](.+?)['"]<\/span>/gi);
             //console.log(matches);
@@ -443,7 +443,7 @@ var ChatBot = function () {
 //                                var response = text.replace(r, pattern.actionValue);
                             var response = pattern.actionValue;
                             if (response != undefined) {
-                                for (j = 1; j < matches.length; j++) {
+                                for (var j = 1; j < matches.length; j++) {
                                     response = response.replace("$" + j, matches[j]);
                                 }
                                 this.addChatEntry(response, "bot");
