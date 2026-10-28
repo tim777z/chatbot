@@ -1,2 +1,4 @@
 raw/
 node_modules/
+dist/
+coverage/

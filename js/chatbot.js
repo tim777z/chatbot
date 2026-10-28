@@ -54,7 +54,7 @@ var ChatBot = function () {
         examplePhrases = [];
         for (i = 0; i < descriptions.length; i++) {
             var pdesc = descriptions[i].replace(/(['"][^'"]+['"])/gi, '<span class="phraseHighlight">$1</span>');
-            pdesc = pdesc.replace(/(\[[^\[\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
+            pdesc = pdesc.replace(/(\[[^\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
             //console.log(pdesc);
             var matches = pdesc.match(/<span class=['"]phraseHighlight["']>['"](.+?)['"]<\/span>/gi);
             //console.log(matches);
@@ -150,6 +150,9 @@ var ChatBot = function () {
         Engines: {
             // the webknox API: http://webknox.com/api
             webknox: function (apiKey) {
+                if (!apiKey) {
+                    throw new Error('ChatBot.Engines.webknox requires an API key.');
+                }
 
                 // patterns that the engine can resolve
                 var capabilities = [
@@ -174,7 +177,17 @@ var ChatBot = function () {
 
                 return {
                     react: function (query) {
+                        if (!query) {
+                            ChatBot.addChatEntry('Please ask a question.', 'bot');
+                            ChatBot.thinking(false);
+                            return;
+                        }
                         $.get('https://webknox-question-answering.p.mashape.com/questions/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
+                            if (!data || data.answerText == null) {
+                                ChatBot.addChatEntry('Sorry, I could not understand the response from WebKnox.', 'bot');
+                                ChatBot.thinking(false);
+                                return;
+                            }
 
                             var content = data.answerText;
 
@@ -199,6 +212,9 @@ var ChatBot = function () {
 
                             ChatBot.addChatEntry(content, "bot");
                             ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, the WebKnox service is unavailable right now. Please try again later.', 'bot');
+                            ChatBot.thinking(false);
                         });
                     },
                     getCapabilities: function () {
@@ -212,6 +228,9 @@ var ChatBot = function () {
 
             // the spoonacular API: http://spoonacular.com/food-api
             spoonacular: function (apiKey) {
+                if (!apiKey) {
+                    throw new Error('ChatBot.Engines.spoonacular requires an API key.');
+                }
 
                 // patterns that the engine can resolve
                 var capabilities = [
@@ -229,7 +248,17 @@ var ChatBot = function () {
 
                 return {
                     react: function (query) {
+                        if (!query) {
+                            ChatBot.addChatEntry('Please ask a question.', 'bot');
+                            ChatBot.thinking(false);
+                            return;
+                        }
                         $.get('https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
+                            if (!data || data.answerText == null) {
+                                ChatBot.addChatEntry('Sorry, I could not understand the response from Spoonacular.', 'bot');
+                                ChatBot.thinking(false);
+                                return;
+                            }
 
                             var content = data.answerText;
 
@@ -253,6 +282,9 @@ var ChatBot = function () {
                             }
 
                             ChatBot.addChatEntry(content, "bot");
+                            ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, the Spoonacular service is unavailable right now. Please try again later.', 'bot');
                             ChatBot.thinking(false);
                         });
                     },
@@ -283,6 +315,11 @@ var ChatBot = function () {
                             url: 'http://api.duckduckgo.com/?format=json&pretty=1&q=' + encodeURIComponent(query),
                             dataType: 'jsonp'
                         }).done(function (data) {
+                            if (!data) {
+                                ChatBot.addChatEntry('Sorry, I could not understand the DuckDuckGo response.', 'bot');
+                                ChatBot.thinking(false);
+                                return;
+                            }
 
                             var content = data.AbstractText;
 
@@ -327,6 +364,9 @@ var ChatBot = function () {
                             }
 
                             ChatBot.addChatEntry(content, "bot");
+                            ChatBot.thinking(false);
+                        }).fail(function () {
+                            ChatBot.addChatEntry('Sorry, the DuckDuckGo service is unavailable right now. Please try again later.', 'bot');
                             ChatBot.thinking(false);
                         });
                     },
@@ -443,7 +483,7 @@ var ChatBot = function () {
 //                                var response = text.replace(r, pattern.actionValue);
                             var response = pattern.actionValue;
                             if (response != undefined) {
-                                for (var j = 1; j < matches.length; j++) {
+                                for (j = 1; j < matches.length; j++) {
                                     response = response.replace("$" + j, matches[j]);
                                 }
                                 this.addChatEntry(response, "bot");
@@ -502,7 +542,17 @@ var ChatBot = function () {
                 callback: callback
             };
             this.addPatternObject(obj);
+        },
+        getExamplePhrases: function () {
+            return examplePhrases.slice();
+        },
+        updateCommandDescription: function () {
+            updateCommandDescription();
         }
 
     }
 }();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ChatBot;
+}
