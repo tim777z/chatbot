@@ -149,6 +149,14 @@ var myengine = function() {
 }();
 ```
 
+## Security Notes
+
+API keys passed to `ChatBot.Engines.webknox` / `ChatBot.Engines.spoonacular` are
+embedded in client-side network requests and are visible to anyone who can inspect
+the page's traffic. For a production site, proxy these requests through your own
+backend and inject the keys server-side (see `.env.example` for the expected
+variable names). The factories throw a clear error if an API key is missing.
+
 ## Development
 
 Requires [Node.js](https://nodejs.org/) 22 (see `.nvmrc`).

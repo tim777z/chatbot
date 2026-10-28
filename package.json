@@ -4,7 +4,8 @@
   "description": "A simple chat bot in JavaScript with links to smart conversational APIs such as WebKnox (all purpose question answering), spoonacular (food related conversations), and DuckDuckGo Instant Answers (mostly entities like movies, people, and places).",
   "main": "chatbot.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --coverage",
+    "build": "terser js/chatbot.js -o dist/chatbot.min.js",
     "lint": "eslint js/"
   },
   "repository": {
@@ -30,11 +31,18 @@
   },
   "homepage": "https://github.com/ddsky/chatbot#readme",
   "devDependencies": {
+    "eslint": "^8.56.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "eslint": "^8.56.0"
+    "terser": "^5.51.2"
   },
   "jest": {
-    "testEnvironment": "jsdom"
+    "testEnvironment": "jsdom",
+    "collectCoverageFrom": ["js/chatbot.js"],
+    "coverageThreshold": {
+      "global": {
+        "lines": 50
+      }
+    }
   }
 }
