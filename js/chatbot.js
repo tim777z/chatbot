@@ -31,6 +31,33 @@ var ChatBot = function () {
     // a callback for after a chat entry has been added
     var addChatEntryCallback;
 
+    // optional host hook for engine failures
+    var onEngineErrorCallback = null;
+
+    // resolve a validateApiResponse implementation (Node or browser)
+    var validateApiResponse = (function () {
+        if (typeof require === 'function') {
+            try {
+                var m = require('./validate.js');
+                if (m && typeof m.validateApiResponse === 'function') {
+                    return m.validateApiResponse;
+                }
+            } catch (e) {
+                // fall through to globals
+            }
+        }
+        if (typeof globalThis !== 'undefined' && typeof globalThis.validateApiResponse === 'function') {
+            return globalThis.validateApiResponse;
+        }
+        if (typeof global !== 'undefined' && typeof global.validateApiResponse === 'function') {
+            return global.validateApiResponse;
+        }
+        if (typeof window !== 'undefined' && typeof window.validateApiResponse === 'function') {
+            return window.validateApiResponse;
+        }
+        return function () { return true; };
+    })();
+
     // list all the predefined commands and the commands of each engine
     function updateCommandDescription() {
         var description = '';
@@ -183,7 +210,8 @@ var ChatBot = function () {
                             return;
                         }
                         $.get('https://webknox-question-answering.p.mashape.com/questions/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
-                            if (!data || data.answerText == null) {
+                            if (!validateApiResponse(data, ['answerText'])) {
+                                if (onEngineErrorCallback) { try { onEngineErrorCallback('webknox', new Error('Invalid WebKnox response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the response from WebKnox.', 'bot');
                                 ChatBot.thinking(false);
                                 return;
@@ -212,7 +240,8 @@ var ChatBot = function () {
 
                             ChatBot.addChatEntry(content, "bot");
                             ChatBot.thinking(false);
-                        }).fail(function () {
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            if (onEngineErrorCallback) { try { onEngineErrorCallback('webknox', errorThrown || new Error(textStatus || 'WebKnox request failed')); } catch (e) { /* ignore */ } }
                             ChatBot.addChatEntry('Sorry, the WebKnox service is unavailable right now. Please try again later.', 'bot');
                             ChatBot.thinking(false);
                         });
@@ -254,7 +283,8 @@ var ChatBot = function () {
                             return;
                         }
                         $.get('https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
-                            if (!data || data.answerText == null) {
+                            if (!validateApiResponse(data, ['answerText'])) {
+                                if (onEngineErrorCallback) { try { onEngineErrorCallback('spoonacular', new Error('Invalid Spoonacular response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the response from Spoonacular.', 'bot');
                                 ChatBot.thinking(false);
                                 return;
@@ -283,7 +313,8 @@ var ChatBot = function () {
 
                             ChatBot.addChatEntry(content, "bot");
                             ChatBot.thinking(false);
-                        }).fail(function () {
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            if (onEngineErrorCallback) { try { onEngineErrorCallback('spoonacular', errorThrown || new Error(textStatus || 'Spoonacular request failed')); } catch (e) { /* ignore */ } }
                             ChatBot.addChatEntry('Sorry, the Spoonacular service is unavailable right now. Please try again later.', 'bot');
                             ChatBot.thinking(false);
                         });
@@ -312,10 +343,11 @@ var ChatBot = function () {
                     react: function (query) {
                         $.ajax({
                             type: 'GET',
-                            url: 'http://api.duckduckgo.com/?format=json&pretty=1&q=' + encodeURIComponent(query),
+                            url: 'https://api.duckduckgo.com/?format=json&pretty=1&q=' + encodeURIComponent(query),
                             dataType: 'jsonp'
                         }).done(function (data) {
-                            if (!data) {
+                            if (!validateApiResponse(data, [])) {
+                                if (onEngineErrorCallback) { try { onEngineErrorCallback('duckduckgo', new Error('Invalid DuckDuckGo response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the DuckDuckGo response.', 'bot');
                                 ChatBot.thinking(false);
                                 return;
@@ -324,7 +356,7 @@ var ChatBot = function () {
                             var content = data.AbstractText;
 
                             // no direct answer? tell about related topics then
-                            if (content == '' && data.RelatedTopics.length > 0) {
+                            if (content == '' && Array.isArray(data.RelatedTopics) && data.RelatedTopics.length > 0) {
 
                                 content = '<p>I found multiple answers for you:</p>';
 
@@ -365,7 +397,8 @@ var ChatBot = function () {
 
                             ChatBot.addChatEntry(content, "bot");
                             ChatBot.thinking(false);
-                        }).fail(function () {
+                        }).fail(function (jqXHR, textStatus, errorThrown) {
+                            if (onEngineErrorCallback) { try { onEngineErrorCallback('duckduckgo', errorThrown || new Error(textStatus || 'DuckDuckGo request failed')); } catch (e) { /* ignore */ } }
                             ChatBot.addChatEntry('Sorry, the DuckDuckGo service is unavailable right now. Please try again later.', 'bot');
                             ChatBot.thinking(false);
                         });
@@ -402,6 +435,7 @@ var ChatBot = function () {
             engines = settings.engines;
             patterns = settings.patterns;
             addChatEntryCallback = settings.addChatEntryCallback;
+            onEngineErrorCallback = (typeof settings.onEngineError === 'function') ? settings.onEngineError : null;
 
             // update the command description
             updateCommandDescription();
@@ -556,3 +590,4 @@ var ChatBot = function () {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ChatBot;
 }
+

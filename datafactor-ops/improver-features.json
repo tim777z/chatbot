@@ -1,0 +1,9 @@
+{
+  "features": [
+    { "id": "validate-response", "status": "verified", "test": "npx jest test/chatbot.validation.test.js" },
+    { "id": "engine-error-hook", "status": "verified", "test": "npx jest test/chatbot.onengineerror.test.js" },
+    { "id": "coverage-threshold", "status": "verified", "test": "npm test" },
+    { "id": "duckduckgo-https", "status": "verified", "test": "npm test" },
+    { "id": "docs-changelog-contributing-architecture", "status": "verified", "test": "n/a" }
+  ]
+}
