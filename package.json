@@ -24,7 +24,7 @@
   "author": "David Urbansky",
   "license": "Apache-2.0",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "bugs": {
     "url": "https://github.com/ddsky/chatbot/issues"
@@ -38,10 +38,13 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "collectCoverageFrom": ["js/chatbot.js"],
+    "collectCoverageFrom": [
+      "js/**/*.js"
+    ],
     "coverageThreshold": {
       "global": {
-        "lines": 50
+        "lines": 75,
+        "branches": 55
       }
     }
   }
