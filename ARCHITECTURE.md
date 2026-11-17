@@ -13,6 +13,10 @@ It contains:
 
 - `js/validate.js` provides `validateApiResponse(payload, requiredFields)` used by
   engine success callbacks to guard against malformed API responses.
+- `js/sanitize.js` provides `escapeHtml`, `plainText`, `safeUrl` and `mediaMarkup`.
+  Engine callbacks pass every third-party string through it before building HTML,
+  so untrusted markup and non-HTTP URL schemes cannot reach the DOM. It must be
+  loaded before `js/chatbot.js` in a browser (the minified build bundles both).
 
 ## Data flow
 

@@ -1,3 +1,4 @@
+/* global $, jQuery, globalThis */
 var ChatBot = function () {
 
     //// common vars
@@ -58,6 +59,41 @@ var ChatBot = function () {
         return function () { return true; };
     })();
 
+    // resolve a sanitizer implementation (Node or browser), with a fail-closed
+    // fallback so a missing script cannot reintroduce HTML injection
+    var sanitize = (function () {
+        if (typeof require === 'function') {
+            try {
+                var m = require('./sanitize.js');
+                if (m && typeof m.escapeHtml === 'function') {
+                    return m;
+                }
+            } catch (e) {
+                // fall through to globals
+            }
+        }
+        if (typeof globalThis !== 'undefined' && globalThis.ChatBotSanitize) {
+            return globalThis.ChatBotSanitize;
+        }
+        if (typeof window !== 'undefined' && window.ChatBotSanitize) {
+            return window.ChatBotSanitize;
+        }
+        return {
+            escapeHtml: function (value) {
+                if (value === null || value === undefined) { return ''; }
+                return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            },
+            plainText: function (value) {
+                if (value === null || value === undefined) { return ''; }
+                return String(value).replace(/<[^>]*>/g, '').replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            },
+            safeUrl: function () { return ''; },
+            mediaMarkup: function () { return ''; }
+        };
+    })();
+
     // list all the predefined commands and the commands of each engine
     function updateCommandDescription() {
         var description = '';
@@ -104,7 +140,9 @@ var ChatBot = function () {
         }
 
         for (i = 0; i < examplePhrases.length; i++) {
-            datalist.append($('<option value="'+examplePhrases[i]+'"></option>'));
+            // Use the jQuery attribute API instead of string concatenation so a
+            // quote in a capability description cannot break out of the value.
+            datalist.append($('<option>').attr('value', examplePhrases[i]));
         }
 
         //console.log(examplePhrases);
@@ -217,25 +255,10 @@ var ChatBot = function () {
                                 return;
                             }
 
-                            var content = data.answerText;
+                            var content = sanitize.plainText(data.answerText);
 
-                            if (data.media != undefined) {
-
-                                content += '<br>';
-
-                                for (var i = 0; i < data.media.length; i++) {
-                                    var ob = data.media[i];
-                                    content += '<div class="imgBox">' +
-                                        '<img src="' + ob.image + '" />' +
-                                        '<div class="title">' + ob.title + '</div>' +
-                                        '<div class="actions">' +
-                                        '<div class="button blue" onclick="document.location.href=\'' + ob.link + '\'">Details</div>' +
-                                        '<br>' +
-                                        '<div class="button blue" onclick=" ChatBot.addChatEntry(\'more like number ' + (i + 1) + '\',\'human\');ChatBot.react(\'more like ' + (i + 1) + '\');">More like this</div>' +
-                                        '</div>' +
-                                        '</div>';
-                                }
-
+                            if (Array.isArray(data.media) && data.media.length > 0) {
+                                content += '<br>' + sanitize.mediaMarkup(data.media);
                             }
 
                             ChatBot.addChatEntry(content, "bot");
@@ -290,25 +313,10 @@ var ChatBot = function () {
                                 return;
                             }
 
-                            var content = data.answerText;
+                            var content = sanitize.plainText(data.answerText);
 
-                            if (data.media != undefined) {
-
-                                content += '<br>';
-
-                                for (var i = 0; i < data.media.length; i++) {
-                                    var ob = data.media[i];
-                                    content += '<div class="imgBox">' +
-                                        '<img src="' + ob.image + '" />' +
-                                        '<div class="title">' + ob.title + '</div>' +
-                                        '<div class="actions">' +
-                                        '<div class="button blue" onclick="document.location.href=\'' + ob.link + '\'">Details</div>' +
-                                        '<br>' +
-                                        '<div class="button blue" onclick=" ChatBot.addChatEntry(\'more like number ' + (i + 1) + '\',\'human\');ChatBot.react(\'more like ' + (i + 1) + '\');">More like this</div>' +
-                                        '</div>' +
-                                        '</div>';
-                                }
-
+                            if (Array.isArray(data.media) && data.media.length > 0) {
+                                content += '<br>' + sanitize.mediaMarkup(data.media);
                             }
 
                             ChatBot.addChatEntry(content, "bot");
@@ -353,7 +361,7 @@ var ChatBot = function () {
                                 return;
                             }
 
-                            var content = data.AbstractText;
+                            var content = sanitize.plainText(data.AbstractText);
 
                             // no direct answer? tell about related topics then
                             if (content == '' && Array.isArray(data.RelatedTopics) && data.RelatedTopics.length > 0) {
@@ -363,34 +371,32 @@ var ChatBot = function () {
                                 var media = [];
                                 for (var i = 0; i < data.RelatedTopics.length; i++) {
                                     var ob = data.RelatedTopics[i];
-                                    if (ob.Result == undefined) {
+                                    if (!ob || ob.Result === null || ob.Result === undefined) {
                                         continue;
                                     }
-                                    if (ob.Icon.URL != '' && ob.Icon.URL.indexOf(".ico") < 0) {
-                                        media.push(ob.Icon.URL);
+                                    if (ob.Icon && typeof ob.Icon.URL === 'string' &&
+                                            ob.Icon.URL !== '' && ob.Icon.URL.indexOf('.ico') < 0) {
+                                        var iconUrl = sanitize.safeUrl(ob.Icon.URL);
+                                        if (iconUrl !== '') {
+                                            media.push(iconUrl);
+                                        }
                                     }
 
-                                    content += '<p>' + ob.Result.replace("</a>", "</a> ") + '</p>';
+                                    content += '<p>' + sanitize.plainText(ob.Result) + '</p>';
                                 }
 
-                                ///content += '<img src="' + ob.Icon.URL + '" align="left" />' +
-
                                 for (i = 0; i < media.length; i++) {
-                                    var m = media[i];
-                                    content += '<img src="' + m + '" style="margin-right:5px"/>';
+                                    content += '<img src="' + media[i] + '" style="margin-right:5px" alt="" />';
                                 }
 
                             } else {
 
-                                if (data.Image != undefined && data.Image != '') {
-
-                                    content += '<br>';
-
-                                    content += '<div class="imgBox">' +
-                                        '<img src="' + data.Image + '" />' +
-                                        '<div class="title">' + data.Heading + '</div>' +
+                                var imageUrl = sanitize.safeUrl(data.Image);
+                                if (imageUrl !== '') {
+                                    content += '<br>' + '<div class="imgBox">' +
+                                        '<img src="' + imageUrl + '" alt="" />' +
+                                        '<div class="title">' + sanitize.plainText(data.Heading) + '</div>' +
                                         '</div>';
-
                                 }
 
                             }
@@ -422,7 +428,7 @@ var ChatBot = function () {
                 inputCapabilityListing: true,
                 engines: [],
                 patterns: [],
-                addChatEntryCallback: function(entryDiv, text, origin) {
+                addChatEntryCallback: function(entryDiv) {
                     entryDiv.addClass('appear');
                 }
             }, options);
@@ -460,7 +466,7 @@ var ChatBot = function () {
         },
         setHumanName: function (name) {
             humanName = name;
-            $('.chatBotChatEntry.human .origin').html(name);
+            $('.chatBotChatEntry.human .origin').html(sanitize.escapeHtml(name));
         },
         addChatEntry: function addChatEntry(text, origin) {
             if (text == undefined) {
@@ -470,7 +476,8 @@ var ChatBot = function () {
                 text = 'Sorry, I have no idea.';
             }
             var entryDiv = $('<div class="chatBotChatEntry ' + origin + '"></div>');
-            entryDiv.html('<span class="origin">' + (origin == 'bot' ? botName : humanName) + '</span>' + text);
+            entryDiv.html('<span class="origin">' +
+                sanitize.escapeHtml(origin == 'bot' ? botName : humanName) + '</span>' + text);
             $('#chatBotHistory').prepend(entryDiv);
             if (addChatEntryCallback != undefined) {
                 addChatEntryCallback.call(this, entryDiv, text, origin);

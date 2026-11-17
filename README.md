@@ -12,9 +12,13 @@ AI-powered conversational agent with smart API integrations. Answers questions u
 ## Quick Start
 
 ```bash
-npm install
-npm start
+npm ci          # reproducible install from package-lock.json
+npm test        # Jest suite with coverage enforcement
+npm run build   # regenerate dist/chatbot.min.js
 ```
+
+When embedding the library directly in a page, load `js/sanitize.js` before
+`js/chatbot.js`. The prebuilt `dist/chatbot.min.js` already contains both files.
 
 ## API Integrations
 
@@ -26,7 +30,7 @@ npm start
 
 ## License
 
-Proprietary — PreCog Security
+Proprietary - PreCog Security. See [LICENSE](LICENSE) for terms.
 
 ## Contact
 
@@ -34,9 +38,9 @@ timlangeveldt@gmail.com
 
 ## Demo
 
-Take a look at the JavaScript Chat Bot using the Duck Duck Go Engine: [DDG Demo](http://rawgit.com/ddsky/chatbot/master/demo/demo-ddg.html)
+Take a look at the JavaScript Chat Bot using the Duck Duck Go Engine: [DDG Demo](demo/demo-ddg.html)
 
-This Bot is more advanced using the WebKnox Engine (API key needed): [WebKnox Demo](http://rawgit.com/ddsky/chatbot/master/demo/demo-webknox.html)
+This Bot is more advanced using the WebKnox Engine (API key needed): [WebKnox Demo](demo/demo-webknox.html)
 
 Here a quick demonstration of the chatbot using the spoonacular conversation engine:
 ![spoonacular chatbot](img/spoonacular-chatbot-animation.gif)
@@ -67,6 +71,11 @@ var config = {
     // you can specify what should happen to newly added messages
     addChatEntryCallback: function(entryDiv, text, origin) {
         entryDiv.slideDown();
+    },
+    // optional: observe engine failures for logging/monitoring
+    onEngineError: function(engineName, error) {
+        // e.g. report to your telemetry endpoint; never log API keys
+        console.warn('engine failed', engineName, error);
     }
 };
 ChatBot.init(config);
@@ -156,6 +165,16 @@ embedded in client-side network requests and are visible to anyone who can inspe
 the page's traffic. For a production site, proxy these requests through your own
 backend and inject the keys server-side (see `.env.example` for the expected
 variable names). The factories throw a clear error if an API key is missing.
+
+Third-party API responses are untrusted input. `js/sanitize.js` strips markup from
+answer text, escapes bot/participant names, and only allows `http(s)` or relative
+URLs in generated `href`/`src` attributes, so a malicious or compromised API cannot
+inject `<script>` or inline event handlers into the widget. Custom patterns and
+engines that call `ChatBot.addChatEntry` directly are still responsible for passing
+safe markup.
+
+The test command uses `--runInBand`; the suite is small, and this avoids worker
+teardown hangs on newer Node.js releases while keeping results deterministic.
 
 ## Development
 

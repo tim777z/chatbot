@@ -4,6 +4,12 @@
     { "id": "engine-error-hook", "status": "verified", "test": "npx jest test/chatbot.onengineerror.test.js" },
     { "id": "coverage-threshold", "status": "verified", "test": "npm test" },
     { "id": "duckduckgo-https", "status": "verified", "test": "npm test" },
-    { "id": "docs-changelog-contributing-architecture", "status": "verified", "test": "n/a" }
+    { "id": "docs-changelog-contributing-architecture", "status": "verified", "test": "n/a" },
+    { "id": "test-runner-determinism", "status": "verified", "test": "npm test" },
+    { "id": "sanitize-untrusted-api-output", "status": "verified", "test": "npx jest test/chatbot.sanitization.test.js --runInBand" },
+    { "id": "coverage-gate-raise", "status": "verified", "test": "npm test" },
+    { "id": "fresh-clone-docs-consistency", "status": "verified", "test": "n/a" },
+    { "id": "lint-clean-source", "status": "verified", "test": "npm run lint" },
+    { "id": "minified-build-bundles-sanitizer", "status": "verified", "test": "npm run build" }
   ]
 }
