@@ -4,8 +4,8 @@
   "description": "A simple chat bot in JavaScript with links to smart conversational APIs such as WebKnox (all purpose question answering), spoonacular (food related conversations), and DuckDuckGo Instant Answers (mostly entities like movies, people, and places).",
   "main": "chatbot.js",
   "scripts": {
-    "test": "jest --coverage",
-    "build": "terser js/chatbot.js -o dist/chatbot.min.js",
+    "test": "jest --coverage --runInBand",
+    "build": "terser js/sanitize.js js/chatbot.js -o dist/chatbot.min.js",
     "lint": "eslint js/"
   },
   "repository": {
@@ -22,7 +22,7 @@
     "jquery-plugin"
   ],
   "author": "David Urbansky",
-  "license": "Apache-2.0",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22"
   },
@@ -43,8 +43,8 @@
     ],
     "coverageThreshold": {
       "global": {
-        "lines": 75,
-        "branches": 55
+        "lines": 85,
+        "branches": 65
       }
     }
   }
