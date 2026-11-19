@@ -17,8 +17,10 @@ npm test        # Jest suite with coverage enforcement
 npm run build   # regenerate dist/chatbot.min.js
 ```
 
-When embedding the library directly in a page, load `js/sanitize.js` before
-`js/chatbot.js`. The prebuilt `dist/chatbot.min.js` already contains both files.
+When embedding the library directly in a page, load `js/sanitize.js` and
+`js/validate.js` before `js/chatbot.js`. The prebuilt `dist/chatbot.min.js`
+already contains all three; omitting `validate.js` would silently disable
+response validation in the browser.
 
 ## API Integrations
 
@@ -169,9 +171,29 @@ variable names). The factories throw a clear error if an API key is missing.
 Third-party API responses are untrusted input. `js/sanitize.js` strips markup from
 answer text, escapes bot/participant names, and only allows `http(s)` or relative
 URLs in generated `href`/`src` attributes, so a malicious or compromised API cannot
-inject `<script>` or inline event handlers into the widget. Custom patterns and
-engines that call `ChatBot.addChatEntry` directly are still responsible for passing
-safe markup.
+inject `<script>` or inline event handlers into the widget. Human keyboard input
+and captures substituted into `response` patterns are escaped for the same reason.
+Custom patterns and engines that call `ChatBot.addChatEntry` directly are still
+responsible for passing safe markup, because that method treats its `text`
+argument as HTML.
+
+### Response Validation
+
+Engine success callbacks run `validateApiResponse(payload, requiredFields)`
+from `js/validate.js` before any value is rendered. It rejects null, primitive
+and non-object payloads, and requires each named field to be present and
+non-null:
+
+| Engine | Required fields |
+|--------|-----------------|
+| WebKnox | `answerText` |
+| Spoonacular | `answerText` |
+| DuckDuckGo | none (all fields optional; `AbstractText` or `RelatedTopics` is used when present) |
+
+A payload that fails validation triggers `onEngineError(engineName, error)`,
+shows a generic "could not understand the response" message, and never reaches
+the renderer. Host-supplied engines should apply the same contract before
+calling `ChatBot.addChatEntry`.
 
 The test command uses `--runInBand`; the suite is small, and this avoids worker
 teardown hangs on newer Node.js releases while keeping results deterministic.
@@ -181,9 +203,14 @@ teardown hangs on newer Node.js releases while keeping results deterministic.
 Requires [Node.js](https://nodejs.org/) 22 (see `.nvmrc`).
 
 ```bash
-npm ci          # install dependencies from the lockfile
-npm test        # run the Jest test suite
-npm run lint    # run ESLint on js/
+npm ci             # install dependencies from the lockfile
+npm test           # run the Jest test suite
+npm run lint       # run ESLint on js/
+npm run typecheck  # validate JSDoc types with tsc --noEmit (jsconfig.json)
 ```
+
+Public functions in `js/chatbot.js`, `js/sanitize.js` and `js/validate.js` carry
+JSDoc types. `jsconfig.json` enables `checkJs` for editors and CI, so the
+library can be type-checked without migrating away from plain JavaScript.
     
    

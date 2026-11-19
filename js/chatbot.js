@@ -94,6 +94,36 @@ var ChatBot = function () {
         };
     })();
 
+    /**
+     * @typedef {Object} ChatEngine
+     * @property {function(string): void} react Handle a user query.
+     * @property {function(): string[]} getCapabilities Return example phrases.
+     * @property {function(): (string|null)} getSuggestUrl Return an autocomplete
+     *   URL prefix, or null when the engine has no suggestions.
+     */
+
+    /**
+     * Expand $1..$N placeholders in a pattern template. Captures originate in
+     * user input, so HTML-bound templates escape them; rewrite templates feed
+     * engine queries instead, where escaping would corrupt the query. A replacer
+     * function keeps a capture containing "$&" from being reinterpreted.
+     * @param {string} template
+     * @param {Array} matches Regex match array from String.prototype.match.
+     * @param {boolean} escapeCaptures Escape captures when the result is HTML.
+     * @returns {string}
+     */
+    function expandTemplate(template, matches, escapeCaptures) {
+        var out = template;
+        for (var j = 1; j < matches.length; j++) {
+            var value = matches[j] === undefined ? '' : matches[j];
+            if (escapeCaptures) {
+                value = sanitize.escapeHtml(value);
+            }
+            out = out.replace('$' + j, function () { return value; });
+        }
+        return out;
+    }
+
     // list all the predefined commands and the commands of each engine
     function updateCommandDescription() {
         var description = '';
@@ -168,7 +198,9 @@ var ChatBot = function () {
             } else {
 
                 // press enter and wait for some time and then write the next entry
-                ChatBot.addChatEntry(state.currentInput, "human");
+                // Conversation entries are rendered as HTML by addChatEntry,
+                // so escape even host-supplied text at the rendering boundary.
+                ChatBot.addChatEntry(sanitize.escapeHtml(state.currentInput), "human");
                 ChatBot.react(state.currentInput);
                 $(inputs).val(state.currentInput);
 
@@ -213,7 +245,11 @@ var ChatBot = function () {
 
     return {
         Engines: {
-            // the webknox API: http://webknox.com/api
+            /**
+             * WebKnox question-answering engine.
+             * @param {string} apiKey WebKnox/Mashape API key (client-side).
+             * @returns {ChatEngine}
+             */
             webknox: function (apiKey) {
                 if (!apiKey) {
                     throw new Error('ChatBot.Engines.webknox requires an API key.');
@@ -278,7 +314,11 @@ var ChatBot = function () {
                 }
             },
 
-            // the spoonacular API: http://spoonacular.com/food-api
+            /**
+             * Spoonacular food-conversation engine.
+             * @param {string} apiKey Spoonacular/Mashape API key (client-side).
+             * @returns {ChatEngine}
+             */
             spoonacular: function (apiKey) {
                 if (!apiKey) {
                     throw new Error('ChatBot.Engines.spoonacular requires an API key.');
@@ -336,6 +376,10 @@ var ChatBot = function () {
                 }
             },
 
+            /**
+             * DuckDuckGo Instant Answer engine; no API key required.
+             * @returns {ChatEngine}
+             */
             duckduckgo: function () {
 
                 // patterns that the engine can resolve
@@ -418,6 +462,12 @@ var ChatBot = function () {
                 }
             }
         },
+        /**
+         * Initialise the widget and bind its input fields.
+         * @param {Object} options Configuration overrides (botName, inputs,
+         *   patterns, engines, onEngineError, addChatEntryCallback, ...).
+         * @returns {void}
+         */
         init: function (options) {
             var settings = jQuery.extend({
                 // these are the defaults.
@@ -453,21 +503,40 @@ var ChatBot = function () {
 
             // listen to inputs on the defined fields
             $(inputs).keyup(function (e) {
-                if (e.keyCode == 13) {
-                    ChatBot.addChatEntry($(this).val(), "human");
-                    ChatBot.react($(this).val());
+                if (e.keyCode === 13) {
+                    // Human input is untrusted: escape it before it reaches
+                    // addChatEntry, which treats its text argument as HTML.
+                    // The raw value is still passed to the engines as a query.
+                    var rawInput = $(this).val();
+                    ChatBot.addChatEntry(sanitize.escapeHtml(rawInput), "human");
+                    ChatBot.react(rawInput);
                 }
                 //console.log($(this).val());
             });
 
         },
+        /**
+         * @param {string} name Display name for bot messages.
+         * @returns {void}
+         */
         setBotName: function (name) {
             botName = name;
         },
+        /**
+         * @param {string} name Display name for human messages.
+         * @returns {void}
+         */
         setHumanName: function (name) {
             humanName = name;
             $('.chatBotChatEntry.human .origin').html(sanitize.escapeHtml(name));
         },
+        /**
+         * Append a message to the history. The text is treated as HTML, so
+         * callers must escape any untrusted value before passing it here.
+         * @param {*} text Message markup (pre-escaped when untrusted).
+         * @param {string} origin Either "bot" or "human".
+         * @returns {void}
+         */
         addChatEntry: function addChatEntry(text, origin) {
             if (text == undefined) {
                 return;
@@ -483,6 +552,10 @@ var ChatBot = function () {
                 addChatEntryCallback.call(this, entryDiv, text, origin);
             }
         },
+        /**
+         * @param {boolean} on Whether to show the thinking indicator.
+         * @returns {void}
+         */
         thinking: function (on) {
             var ti = $('#chatBotThinkingIndicator');
             if (on) {
@@ -499,6 +572,11 @@ var ChatBot = function () {
                 ti.html('');
             }
         },
+        /**
+         * Match a query against patterns, then dispatch to configured engines.
+         * @param {string} text Raw user query.
+         * @returns {void}
+         */
         react: function react(text) {
             this.thinking(true);
 
@@ -511,10 +589,8 @@ var ChatBot = function () {
                 if (matches) {
                     switch (pattern.actionKey) {
                         case 'rewrite':
-                            text = pattern.actionValue;
-                            for (var j = 1; j < matches.length; j++) {
-                                text = text.replace("$" + j, matches[j]);
-                            }
+                            // Rewrite output becomes an engine query, not HTML.
+                            text = expandTemplate(pattern.actionValue, matches, false);
                             //console.log("rewritten to " + text);
                             if (pattern.callback != undefined) {
                                 pattern.callback.call(this, matches);
@@ -522,11 +598,11 @@ var ChatBot = function () {
                             break;
                         case 'response':
 //                                var response = text.replace(r, pattern.actionValue);
-                            var response = pattern.actionValue;
-                            if (response != undefined) {
-                                for (j = 1; j < matches.length; j++) {
-                                    response = response.replace("$" + j, matches[j]);
-                                }
+                            if (pattern.actionValue !== undefined) {
+                                // Response output is rendered as HTML, so every
+                                // user-supplied capture is escaped before it is
+                                // substituted into the template.
+                                var response = expandTemplate(pattern.actionValue, matches, true);
                                 this.addChatEntry(response, "bot");
                             }
                             ChatBot.thinking(false);
@@ -545,6 +621,12 @@ var ChatBot = function () {
             }
 
         },
+        /**
+         * Play a scripted conversation with a typewriter effect.
+         * @param {string[]} conversation Lines to type in order.
+         * @param {number} [pauseLength] Milliseconds between lines (default 3000).
+         * @returns {boolean} False when a conversation is already running.
+         */
         playConversation: function (conversation, pauseLength) {
 
             if (pauseLength == undefined) {
@@ -570,10 +652,23 @@ var ChatBot = function () {
 
             return true;
         },
+        /**
+         * @param {Object} obj Pattern descriptor.
+         * @returns {void}
+         */
         addPatternObject: function (obj) {
             patterns.push(obj);
             updateCommandDescription();
         },
+        /**
+         * Register a response or rewrite pattern.
+         * @param {string|RegExp} regexp Pattern matched against user input.
+         * @param {string} actionKey Either "response" or "rewrite".
+         * @param {string} [actionValue] Template with $1..$N placeholders.
+         * @param {function(Array): void} [callback] Called with regex matches.
+         * @param {string} [description] Capability text shown under the input.
+         * @returns {void}
+         */
         addPattern: function (regexp, actionKey, actionValue, callback, description) {
             var obj = {
                 regexp: regexp,
@@ -584,9 +679,16 @@ var ChatBot = function () {
             };
             this.addPatternObject(obj);
         },
+        /**
+         * @returns {string[]} A copy of the example phrases extracted from
+         *   registered capabilities.
+         */
         getExamplePhrases: function () {
             return examplePhrases.slice();
         },
+        /**
+         * @returns {void}
+         */
         updateCommandDescription: function () {
             updateCommandDescription();
         }
