@@ -2,6 +2,12 @@
 (function (global) {
     "use strict";
 
+    /**
+     * Reject malformed API payloads before any value reaches the renderer.
+     * @param {*} payload Parsed response body.
+     * @param {string[]} [requiredFields] Fields that must be present and non-null.
+     * @returns {boolean} True when the payload is an object with all required fields.
+     */
     function validateApiResponse(payload, requiredFields) {
         if (payload === null || payload === undefined) {
             return false;

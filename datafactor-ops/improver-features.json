@@ -10,6 +10,12 @@
     { "id": "coverage-gate-raise", "status": "verified", "test": "npm test" },
     { "id": "fresh-clone-docs-consistency", "status": "verified", "test": "n/a" },
     { "id": "lint-clean-source", "status": "verified", "test": "npm run lint" },
-    { "id": "minified-build-bundles-sanitizer", "status": "verified", "test": "npm run build" }
+    { "id": "minified-build-bundles-sanitizer", "status": "verified", "test": "npm run build" },
+    { "id": "xss-input-boundary-hardening", "status": "verified", "test": "npm test (9 suites / 45 tests, coverage 87.32% stmts / 68.37% branches)" },
+    { "id": "jsdoc-public-api-types", "status": "verified", "test": "npm run typecheck" },
+    { "id": "typecheck-ci", "status": "verified", "test": "npm run typecheck (same command wired into .github/workflows/ci.yml)" },
+    { "id": "browser-bundle-validation", "status": "verified", "test": "npm run build; bundle contains validateApiResponse and ChatBotSanitize" },
+    { "id": "engine-module-extraction", "status": "blocked", "test": "no-tests (deferred: engines capture shared closure state; extraction requires invasive dependency injection that conflicts with the playbook's low-churn rule. Existing 9-suite coverage retained.)" },
+    { "id": "security-md-and-validation-docs", "status": "verified", "test": "n/a (static docs: SECURITY.md, README Response Validation, ARCHITECTURE, CHANGELOG, CONTRIBUTING)" }
   ]
 }
