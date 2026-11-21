@@ -11,9 +11,12 @@ It contains:
 
 ## Supporting modules
 
-- `js/validate.js` provides `validateApiResponse(payload, requiredFields)` used by
-  engine success callbacks to guard against malformed API responses (see the
-  "Response Validation" table in `README.md` for the per-engine contract).
+- `js/validate.js` provides
+  `validateApiResponse(payload, requiredFields, fieldTypes)` used by engine
+  success callbacks to guard against malformed API responses. It checks own
+  properties and optional field types; if the module cannot be resolved in a
+  browser, `js/chatbot.js` uses a fail-closed stub (see the "Response
+  Validation" table in `README.md` for the per-engine contract).
 - `js/sanitize.js` provides `escapeHtml`, `plainText`, `safeUrl` and `mediaMarkup`.
   Engine callbacks pass every third-party string through it before building HTML,
   so untrusted markup and non-HTTP URL schemes cannot reach the DOM. It must be

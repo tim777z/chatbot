@@ -56,7 +56,10 @@ var ChatBot = function () {
         if (typeof window !== 'undefined' && typeof window.validateApiResponse === 'function') {
             return window.validateApiResponse;
         }
-        return function () { return true; };
+        // Fail closed: a missing validator must not silently turn off response
+        // validation. Engines will report an error via onEngineError instead of
+        // rendering unverified third-party data.
+        return function () { return false; };
     })();
 
     // resolve a sanitizer implementation (Node or browser), with a fail-closed
@@ -124,6 +127,24 @@ var ChatBot = function () {
         return out;
     }
 
+    /**
+     * Escape markup-significant characters in capability text supplied by
+     * patterns or engines. Quotes are deliberately left intact: the phrase
+     * highlighter below uses them to identify example phrases, and they are
+     * harmless in a text node.
+     * @param {*} value
+     * @returns {string}
+     */
+    function escapeMarkupText(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     // list all the predefined commands and the commands of each engine
     function updateCommandDescription() {
         var description = '';
@@ -146,7 +167,9 @@ var ChatBot = function () {
 
         examplePhrases = [];
         for (i = 0; i < descriptions.length; i++) {
-            var pdesc = descriptions[i].replace(/(['"][^'"]+['"])/gi, '<span class="phraseHighlight">$1</span>');
+            // Capability text comes from host patterns and pluggable engines,
+            // so escape it before it becomes part of an HTML string.
+            var pdesc = escapeMarkupText(descriptions[i]).replace(/(['"][^'"]+['"])/gi, '<span class="phraseHighlight">$1</span>');
             pdesc = pdesc.replace(/(\[[^\]]+\])/gi, '<span class="placeholderHighlight">$1</span>');
             //console.log(pdesc);
             var matches = pdesc.match(/<span class=['"]phraseHighlight["']>['"](.+?)['"]<\/span>/gi);
@@ -283,8 +306,8 @@ var ChatBot = function () {
                             ChatBot.thinking(false);
                             return;
                         }
-                        $.get('https://webknox-question-answering.p.mashape.com/questions/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
-                            if (!validateApiResponse(data, ['answerText'])) {
+                        $.get('https://webknox-question-answering.p.mashape.com/questions/converse?mashape-key=' + encodeURIComponent(apiKey) + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
+                            if (!validateApiResponse(data, ['answerText'], { answerText: 'string' })) {
                                 if (onEngineErrorCallback) { try { onEngineErrorCallback('webknox', new Error('Invalid WebKnox response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the response from WebKnox.', 'bot');
                                 ChatBot.thinking(false);
@@ -309,7 +332,7 @@ var ChatBot = function () {
                         return capabilities;
                     },
                     getSuggestUrl: function() {
-                        return 'https://webknox-question-answering.p.mashape.com/questions/converse/suggest?mashape-key=' + apiKey + '&query=';
+                        return 'https://webknox-question-answering.p.mashape.com/questions/converse/suggest?mashape-key=' + encodeURIComponent(apiKey) + '&query=';
                     }
                 }
             },
@@ -345,8 +368,8 @@ var ChatBot = function () {
                             ChatBot.thinking(false);
                             return;
                         }
-                        $.get('https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse?mashape-key=' + apiKey + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
-                            if (!validateApiResponse(data, ['answerText'])) {
+                        $.get('https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse?mashape-key=' + encodeURIComponent(apiKey) + '&contextId=' + contextId + '&text=' + encodeURIComponent(query), function (data) {
+                            if (!validateApiResponse(data, ['answerText'], { answerText: 'string' })) {
                                 if (onEngineErrorCallback) { try { onEngineErrorCallback('spoonacular', new Error('Invalid Spoonacular response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the response from Spoonacular.', 'bot');
                                 ChatBot.thinking(false);
@@ -371,7 +394,7 @@ var ChatBot = function () {
                         return capabilities;
                     },
                     getSuggestUrl: function() {
-                        return 'https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse/suggest?mashape-key=' + apiKey + '&query=';
+                        return 'https://spoonacular-recipe-food-nutrition-v1.p.mashape.com/food/converse/suggest?mashape-key=' + encodeURIComponent(apiKey) + '&query=';
                     }
                 }
             },
@@ -398,7 +421,12 @@ var ChatBot = function () {
                             url: 'https://api.duckduckgo.com/?format=json&pretty=1&q=' + encodeURIComponent(query),
                             dataType: 'jsonp'
                         }).done(function (data) {
-                            if (!validateApiResponse(data, [])) {
+                            if (!validateApiResponse(data, [], {
+                                AbstractText: 'string',
+                                Heading: 'string',
+                                Image: 'string',
+                                RelatedTopics: 'array'
+                            })) {
                                 if (onEngineErrorCallback) { try { onEngineErrorCallback('duckduckgo', new Error('Invalid DuckDuckGo response')); } catch (e) { /* ignore */ } }
                                 ChatBot.addChatEntry('Sorry, I could not understand the DuckDuckGo response.', 'bot');
                                 ChatBot.thinking(false);
@@ -544,7 +572,10 @@ var ChatBot = function () {
             if (text == '') {
                 text = 'Sorry, I have no idea.';
             }
-            var entryDiv = $('<div class="chatBotChatEntry ' + origin + '"></div>');
+            // origin is host-supplied when custom engines call this method, so
+            // escape it before it becomes part of a class attribute.
+            var safeOrigin = sanitize.escapeHtml(origin);
+            var entryDiv = $('<div class="chatBotChatEntry ' + safeOrigin + '"></div>');
             entryDiv.html('<span class="origin">' +
                 sanitize.escapeHtml(origin == 'bot' ? botName : humanName) + '</span>' + text);
             $('#chatBotHistory').prepend(entryDiv);

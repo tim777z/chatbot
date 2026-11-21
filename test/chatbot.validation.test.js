@@ -31,4 +31,25 @@ describe('validateApiResponse', () => {
   test('treats non-array requiredFields as "no constraints"', () => {
     expect(validateApiResponse({ a: 1 }, null)).toBe(true);
   });
+
+  test('required fields must be own properties, not inherited ones', () => {
+    expect(validateApiResponse({}, ['constructor'])).toBe(false);
+    expect(validateApiResponse({}, ['toString'])).toBe(false);
+    expect(validateApiResponse({ answerText: 'hi' }, ['answerText'])).toBe(true);
+  });
+
+  test('optional field type expectations reject wrong shapes but allow absent fields', () => {
+    expect(validateApiResponse({ answerText: 42 }, ['answerText'], { answerText: 'string' }))
+      .toBe(false);
+    expect(validateApiResponse({ answerText: 'hi' }, ['answerText'], { answerText: 'string' }))
+      .toBe(true);
+    expect(validateApiResponse({ RelatedTopics: [] }, [], { RelatedTopics: 'array' }))
+      .toBe(true);
+    expect(validateApiResponse({ RelatedTopics: {} }, [], { RelatedTopics: 'array' }))
+      .toBe(false);
+    expect(validateApiResponse({ RelatedTopics: null }, [], { RelatedTopics: 'array' }))
+      .toBe(true);
+    expect(validateApiResponse({ Image: 7 }, [], { Image: 'string' }))
+      .toBe(false);
+  });
 });
