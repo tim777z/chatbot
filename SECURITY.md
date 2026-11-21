@@ -26,11 +26,20 @@ are treated as security-relevant:
 
 1. **Third-party API responses** are untrusted. `js/sanitize.js` strips markup
    from answer text, escapes names, and only permits `http(s)` or relative URLs
-   in generated attributes. `js/validate.js` rejects malformed payloads.
+   in generated attributes. `js/validate.js` rejects malformed payloads,
+   including wrong field types, and validation fails closed if the validator
+   script is not loaded.
 2. **Human input and pattern captures** are untrusted. They are escaped at the
    rendering boundary in `ChatBot.init` (keyboard input) and `ChatBot.react`
    (response templates) before being handed to `addChatEntry`, which interprets
-   its `text` argument as HTML.
+   its `text` argument as HTML. Capability descriptions supplied by host
+   patterns or engines, and the `origin` argument used for CSS classes, are
+   escaped at the same boundary.
+
+The DuckDuckGo engine uses JSONP because the Instant Answer endpoint does not
+offer CORS. That means a script served by `api.duckduckgo.com` is executed in
+the host page, so deployments with a strict Content Security Policy should
+proxy that call through a backend rather than enabling this engine directly.
 
 API keys passed to the WebKnox and Spoonacular factories are embedded in
 client-side requests. They are **not secrets** once the page ships. Production

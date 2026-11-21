@@ -1,5 +1,12 @@
 {
   "features": [
+    { "id": "fail-closed-validation-fallback", "status": "verified", "test": "npx jest test/chatbot.hardening.test.js --runInBand" },
+    { "id": "capability-description-html-escaping", "status": "verified", "test": "npx jest test/chatbot.hardening.test.js --runInBand" },
+    { "id": "engine-key-url-encoding", "status": "verified", "test": "npx jest test/chatbot.hardening.test.js --runInBand" },
+    { "id": "validation-shape-and-own-properties", "status": "verified", "test": "npx jest test/chatbot.validation.test.js --runInBand" },
+    { "id": "charentry-origin-attribute-hardening", "status": "verified", "test": "npx jest test/chatbot.hardening.test.js --runInBand" },
+    { "id": "package-entrypoint-correctness", "status": "verified", "test": "node -e \"require('./');\" => package entry point OK" },
+    { "id": "dist-artifact-doc-accuracy", "status": "verified", "test": "static docs: README states dist/ is generated and git-ignored; npm run build succeeds" },
     { "id": "validate-response", "status": "verified", "test": "npx jest test/chatbot.validation.test.js" },
     { "id": "engine-error-hook", "status": "verified", "test": "npx jest test/chatbot.onengineerror.test.js" },
     { "id": "coverage-threshold", "status": "verified", "test": "npm test" },

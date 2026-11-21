@@ -14,13 +14,15 @@ AI-powered conversational agent with smart API integrations. Answers questions u
 ```bash
 npm ci          # reproducible install from package-lock.json
 npm test        # Jest suite with coverage enforcement
-npm run build   # regenerate dist/chatbot.min.js
+npm run build   # generate dist/chatbot.min.js (build output, not committed)
 ```
 
-When embedding the library directly in a page, load `js/sanitize.js` and
-`js/validate.js` before `js/chatbot.js`. The prebuilt `dist/chatbot.min.js`
-already contains all three; omitting `validate.js` would silently disable
-response validation in the browser.
+`dist/` is generated and git-ignored, so run `npm run build` after cloning if
+you need the single-file bundle. When embedding the unbundled source directly
+in a page, load `js/sanitize.js` and `js/validate.js` before `js/chatbot.js`.
+The generated `dist/chatbot.min.js` contains all three in that order. If
+`validate.js` is missing, validation now fails closed: engine responses are
+rejected and `onEngineError` is invoked instead of being rendered unchecked.
 
 ## API Integrations
 
@@ -175,20 +177,28 @@ inject `<script>` or inline event handlers into the widget. Human keyboard input
 and captures substituted into `response` patterns are escaped for the same reason.
 Custom patterns and engines that call `ChatBot.addChatEntry` directly are still
 responsible for passing safe markup, because that method treats its `text`
-argument as HTML.
+argument as HTML. Capability descriptions are escaped before the command list
+is rendered, and the `origin` argument of `addChatEntry` is escaped before it
+is placed in a CSS class. API keys are URL-encoded in generated request and
+suggest URLs so a malformed key cannot inject query parameters.
 
 ### Response Validation
 
-Engine success callbacks run `validateApiResponse(payload, requiredFields)`
-from `js/validate.js` before any value is rendered. It rejects null, primitive
-and non-object payloads, and requires each named field to be present and
-non-null:
+Engine success callbacks run `validateApiResponse(payload, requiredFields,
+fieldTypes)` from `js/validate.js` before any value is rendered. It rejects
+null, primitive and non-object payloads, requires each named field to be an
+own, non-null property, and checks expected types when values are present:
 
 | Engine | Required fields |
 |--------|-----------------|
 | WebKnox | `answerText` |
 | Spoonacular | `answerText` |
 | DuckDuckGo | none (all fields optional; `AbstractText` or `RelatedTopics` is used when present) |
+
+Type expectations: `answerText` must be a string; DuckDuckGo's `RelatedTopics`
+must be an array, while `AbstractText`, `Heading` and `Image` must be strings
+when supplied. Absent or null optional fields are allowed. Inherited properties
+do not satisfy a required-field check.
 
 A payload that fails validation triggers `onEngineError(engineName, error)`,
 shows a generic "could not understand the response" message, and never reaches

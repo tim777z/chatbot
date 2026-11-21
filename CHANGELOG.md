@@ -26,6 +26,12 @@ All notable changes to this project are documented in this file.
 - DuckDuckGo answers no longer render the literal string `undefined` when
   `AbstractText` is missing, and missing `Icon` objects no longer throw.
 - README quick-start commands, demo links and license now match the repository.
+- `package.json` `main` now points at `js/chatbot.js`, so `require('chatbot')`
+  resolves from a fresh install.
+- WebKnox and Spoonacular API keys are URL-encoded in request and suggest URLs;
+  a key containing `&` or `=` can no longer inject extra query parameters.
+- README now states that `dist/` is generated and must be built after cloning
+  instead of claiming a prebuilt bundle is committed.
 
 ### Changed
 - Engine responses are escaped/stripped before rendering; media links use safe
@@ -42,3 +48,11 @@ All notable changes to this project are documented in this file.
 - Closed a DOM XSS path: untrusted human input and regex captures no longer reach
   `addChatEntry` unescaped. Regression tests live in `test/chatbot.xss.test.js`.
 - Documented client-side API key exposure and recommended backend proxying.
+- Missing `validate.js` now fails closed: engine payloads are rejected and
+  `onEngineError` fires instead of unvalidated data reaching the renderer.
+- Capability descriptions and the `origin` argument of `addChatEntry` are
+  HTML-escaped before they are interpolated into markup.
+- `validateApiResponse` now requires own properties for required fields and
+  supports optional per-field type checks (string/array/object).
+- Documented the DuckDuckGo JSONP trust boundary and the generated `dist/`
+  artifact in `SECURITY.md` / `README.md`.
